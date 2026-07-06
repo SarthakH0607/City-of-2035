@@ -1,0 +1,101 @@
+﻿@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+:root {
+  --bg-base: #050914;
+  --bg-panel: rgba(14, 24, 45, 0.6);
+  --bg-panel-strong: rgba(14, 24, 45, 0.86);
+  --text-primary: #e8ecff;
+  --text-secondary: #92a3c9;
+  --grid-line: rgba(97, 116, 178, 0.13);
+  --neon-blue: #4dc4ff;
+  --neon-violet: #8f7bff;
+  --neon-green: #2cf8c2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 18% 18%, rgba(77, 196, 255, 0.18), transparent 40%),
+    radial-gradient(circle at 82% 15%, rgba(143, 123, 255, 0.2), transparent 45%),
+    linear-gradient(150deg, #040712, #0a1022 40%, #09142a 100%);
+  background-attachment: fixed;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 55px 55px;
+  opacity: 0.4;
+  z-index: -1;
+}
+
+.glass {
+  border: 1px solid rgba(125, 159, 255, 0.24);
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.glow-border {
+  box-shadow:
+    0 0 0 1px rgba(148, 167, 255, 0.2),
+    0 0 24px rgba(77, 196, 255, 0.23),
+    inset 0 0 20px rgba(143, 123, 255, 0.11);
+}
+
+.neon-text {
+  text-shadow: 0 0 12px rgba(77, 196, 255, 0.55);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: rgba(143, 123, 255, 0.55);
+}
+
+.leaflet-container {
+  background: #0b1224;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(65, 84, 132, 0.16),
+    rgba(120, 150, 235, 0.2),
+    rgba(65, 84, 132, 0.16)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
