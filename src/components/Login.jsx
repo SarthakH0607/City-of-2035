@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion as Motion } from "framer-motion";
 
@@ -59,46 +59,47 @@ function Login({ onLogin }) {
 
           <form onSubmit={submitLogin} className="mt-6 space-y-4">
           <div>
-            <label className="mb-1 block text-sm text-slate-300">Email</label>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm outline-none transition focus:border-cyan-300/50"
+              className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-2.5 text-sm outline-none transition duration-200 focus:border-cyan-300/50 focus:bg-black/35 text-slate-200"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-slate-300">Password</label>
-            <div className="flex rounded-xl border border-white/10 bg-black/25 focus-within:border-cyan-300/50">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">Password</label>
+            <div className="flex items-center rounded-xl border border-white/10 bg-black/25 transition duration-200 focus-within:border-cyan-300/50 focus-within:bg-black/35">
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-transparent px-3 py-2 text-sm outline-none"
-                placeholder="Enter password"
+                className="w-full bg-transparent px-4 py-2.5 text-sm outline-none text-slate-200"
+                placeholder="Enter your password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="px-3 text-sm text-slate-300 hover:text-cyan-200"
+                className="px-3 text-xs font-semibold text-slate-400 hover:text-cyan-200 transition duration-200"
               >
-                {showPassword ? "Hide" : "Show"}
+                {showPassword ? "HIDE" : "SHOW"}
               </button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center gap-2 text-slate-300">
+          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider">
+            <label className="flex items-center gap-2 text-slate-400 cursor-pointer hover:text-slate-300 select-none">
               <input
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
+                className="accent-cyan-400 cursor-pointer"
               />
               Remember me
             </label>
-            <a href="#" className="text-cyan-300 hover:text-cyan-200">
+            <a href="#" className="text-cyan-400 hover:text-cyan-300 transition duration-200">
               Forgot password?
             </a>
           </div>

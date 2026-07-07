@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion as Motion } from "framer-motion";
 
@@ -66,59 +66,59 @@ function Signup({ onSignup }) {
 
         <form onSubmit={submitSignup} className="mt-6 space-y-4">
           <div>
-            <label className="mb-1 block text-sm text-slate-300">Full Name</label>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">Full Name</label>
             <input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm outline-none transition focus:border-cyan-300/50"
+              className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-2.5 text-sm outline-none transition duration-200 focus:border-cyan-300/50 focus:bg-black/35 text-slate-200"
               placeholder="Alex Morgan"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-slate-300">Email</label>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm outline-none transition focus:border-cyan-300/50"
+              className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-2.5 text-sm outline-none transition duration-200 focus:border-cyan-300/50 focus:bg-black/35 text-slate-200"
               placeholder="you@example.com"
             />
-            {errors.email && <p className="mt-1 text-sm text-rose-300">{errors.email}</p>}
+            {errors.email && <p className="mt-1 text-xs text-rose-300">{errors.email}</p>}
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-slate-300">Password</label>
-            <div className="flex rounded-xl border border-white/10 bg-black/25 focus-within:border-cyan-300/50">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">Password</label>
+            <div className="flex items-center rounded-xl border border-white/10 bg-black/25 transition duration-200 focus-within:border-cyan-300/50 focus-within:bg-black/35">
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-transparent px-3 py-2 text-sm outline-none"
+                className="w-full bg-transparent px-4 py-2.5 text-sm outline-none text-slate-200"
                 placeholder="At least 6 characters"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="px-3 text-sm text-slate-300 hover:text-cyan-200"
+                className="px-3 text-xs font-semibold text-slate-400 hover:text-cyan-200 transition duration-200"
               >
-                {showPassword ? "Hide" : "Show"}
+                {showPassword ? "HIDE" : "SHOW"}
               </button>
             </div>
-            {errors.password && <p className="mt-1 text-sm text-rose-300">{errors.password}</p>}
+            {errors.password && <p className="mt-1 text-xs text-rose-300">{errors.password}</p>}
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-slate-300">Confirm Password</label>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">Confirm Password</label>
             <input
               type={showPassword ? "text" : "password"}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm outline-none transition focus:border-cyan-300/50"
+              className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-2.5 text-sm outline-none transition duration-200 focus:border-cyan-300/50 focus:bg-black/35 text-slate-200"
               placeholder="Re-enter password"
             />
             {errors.confirmPassword && (
-              <p className="mt-1 text-sm text-rose-300">{errors.confirmPassword}</p>
+              <p className="mt-1 text-xs text-rose-300">{errors.confirmPassword}</p>
             )}
           </div>
 

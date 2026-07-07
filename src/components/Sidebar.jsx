@@ -1,4 +1,4 @@
-﻿import { motion as Motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 import { useState } from "react";
 
 const menuItems = [
@@ -9,9 +9,7 @@ const menuItems = [
   { icon: "📈", label: "Analytics", desc: "Statistics" },
 ];
 
-function Sidebar() {
-  const [activeTab, setActiveTab] = useState("Mobility");
-
+function Sidebar({ activeTab, setActiveTab }) {
   return (
     <aside className="glass glow-border h-full rounded-3xl p-4 sm:p-5">
       <div className="mb-8 flex items-center gap-3">

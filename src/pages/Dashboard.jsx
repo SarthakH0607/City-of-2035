@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { motion as Motion } from "framer-motion";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
@@ -7,6 +7,10 @@ import RouteOptimizer from "../components/RouteOptimizer";
 import MapView from "../components/MapView";
 import Cards from "../components/Cards";
 import SuggestionPanel from "../components/SuggestionPanel";
+import DashboardView from "../components/DashboardView";
+import EvStationsView from "../components/EvStationsView";
+import AnalyticsView from "../components/AnalyticsView";
+import AiAssistantView from "../components/AiAssistantView";
 
 const moodPalette = {
   calm: {
@@ -27,6 +31,7 @@ const moodPalette = {
 };
 
 function Dashboard({ user, onLogout }) {
+  const [activeTab, setActiveTab] = useState("Dashboard");
   const [mood, setMood] = useState("calm");
   const [routes, setRoutes] = useState([]);
   const [selectedRouteId, setSelectedRouteId] = useState("");
@@ -43,7 +48,7 @@ function Dashboard({ user, onLogout }) {
       style={{ filter: mood === "stressed" ? "saturate(115%)" : "none" }}
     >
       <div className="mx-auto grid max-w-[1560px] grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
-        <Sidebar />
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
         <section className="space-y-4">
           <Topbar
@@ -55,24 +60,42 @@ function Dashboard({ user, onLogout }) {
           />
           <Cards selectedRoute={selectedRoute} palette={palette} mood={mood} />
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
-            <div className="space-y-4">
-              <MapView routes={routes} selectedRouteId={selectedRouteId} mood={mood} />
-            </div>
+          {activeTab === "Dashboard" && (
+            <DashboardView palette={palette} />
+          )}
 
-            <div className="space-y-4">
-              <SuggestionPanel mood={mood} selectedRoute={selectedRoute} palette={palette} />
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <RouteOptimizer
-                  onRoutesReady={setRoutes}
-                  selectedRouteId={selectedRouteId}
-                  setSelectedRouteId={setSelectedRouteId}
-                  mood={mood}
-                />
-                <AIAssistant />
+          {activeTab === "Mobility" && (
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
+              <div className="space-y-4">
+                <MapView routes={routes} selectedRouteId={selectedRouteId} mood={mood} />
+              </div>
+
+              <div className="space-y-4">
+                <SuggestionPanel mood={mood} selectedRoute={selectedRoute} palette={palette} />
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <RouteOptimizer
+                    onRoutesReady={setRoutes}
+                    selectedRouteId={selectedRouteId}
+                    setSelectedRouteId={setSelectedRouteId}
+                    mood={mood}
+                  />
+                  <AIAssistant />
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {activeTab === "EV Stations" && (
+            <EvStationsView palette={palette} />
+          )}
+
+          {activeTab === "AI Assistant" && (
+            <AiAssistantView />
+          )}
+
+          {activeTab === "Analytics" && (
+            <AnalyticsView palette={palette} />
+          )}
         </section>
       </div>
     </Motion.main>
