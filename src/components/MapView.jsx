@@ -1,4 +1,4 @@
-﻿import { useMemo } from "react";
+import { useMemo } from "react";
 import { MapContainer, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/images/marker-icon.png";
@@ -96,14 +96,14 @@ function MapView({ routes, selectedRouteId, mood }) {
   const destination = selectedRoutePath[selectedRoutePath.length - 1];
 
   return (
-    <section className="glass rounded-2xl p-4">
+    <section className="glass rounded-2xl p-4 flex flex-col h-full justify-between">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-slate-100">Live Mobility Grid</h3>
         <span className="text-xs text-slate-400">Dark Theme • {mood === "stressed" ? "Low Crowd Only" : mood === "focused" ? "Nearest Only" : "All Stations"}</span>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/10">
-        <MapContainer center={[19.084, 72.887]} zoom={13} className="h-[360px] w-full">
+      <div className="overflow-hidden rounded-2xl border border-white/10 h-[380px] md:h-[450px] xl:h-[630px]">
+        <MapContainer center={[19.084, 72.887]} zoom={13} className="h-full w-full">
           <TileLayer
             attribution='&copy; CartoDB Positron'
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"

@@ -1,4 +1,4 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
 :root {
@@ -26,13 +26,18 @@ body,
 
 body {
   margin: 0;
-  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   color: var(--text-primary);
   background:
     radial-gradient(circle at 18% 18%, rgba(77, 196, 255, 0.18), transparent 40%),
     radial-gradient(circle at 82% 15%, rgba(143, 123, 255, 0.2), transparent 45%),
     linear-gradient(150deg, #040712, #0a1022 40%, #09142a 100%);
   background-attachment: fixed;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Space Grotesk", sans-serif;
+  letter-spacing: -0.01em;
 }
 
 body::before {

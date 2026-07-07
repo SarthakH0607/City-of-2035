@@ -1,4 +1,4 @@
-﻿import { motion as Motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 
 function Cards({ selectedRoute, palette, mood }) {
   const aqi = selectedRoute?.aqi ?? 62;
@@ -99,7 +99,7 @@ function Cards({ selectedRoute, palette, mood }) {
               cx="50"
               cy="50"
               r="42"
-              stroke={palette.glow}
+              stroke={palette.accent}
               strokeWidth="9"
               strokeLinecap="round"
               fill="transparent"
