@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState, useRef } from "react";
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/images/marker-icon.png";
@@ -14,14 +14,106 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// Enhanced EV stations with crowd levels
-const EV_STATIONS = [
-  { id: 1, name: "HyperCharge A", position: [19.082, 72.883], availability: 82, crowd: "low" },
-  { id: 2, name: "Solar Dock B", position: [19.09, 72.895], availability: 54, crowd: "medium" },
-  { id: 3, name: "MetroCharge C", position: [19.087, 72.889], availability: 68, crowd: "high" },
-  { id: 4, name: "EcoHub D", position: [19.075, 72.871], availability: 91, crowd: "low" },
-  { id: 5, name: "Nucleus E", position: [19.098, 72.905], availability: 45, crowd: "high" },
-];
+/* ──────────────────────────────────────────────
+   Fetch real EV charging stations from Overpass
+   (OpenStreetMap — free, no API key)
+   ────────────────────────────────────────────── */
+async function fetchEvStationsAlongRoute(routePath) {
+  if (!routePath || routePath.length < 2) return [];
+
+  // Calculate bounding box from route coordinates [lat, lng]
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const [lat, lng] of routePath) {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+  }
+
+  // Expand bbox slightly (~2km buffer) so we catch stations near the route
+  const buffer = 0.02;
+  minLat -= buffer;
+  maxLat += buffer;
+  minLng -= buffer;
+  maxLng += buffer;
+
+  const query = `
+    [out:json][timeout:15];
+    (
+      node["amenity"="charging_station"](${minLat},${minLng},${maxLat},${maxLng});
+    );
+    out body 30;
+  `;
+
+  try {
+    const res = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `data=${encodeURIComponent(query)}`,
+    });
+
+    if (!res.ok) throw new Error("Overpass API error");
+    const data = await res.json();
+
+    if (!data.elements || !data.elements.length) return [];
+
+    // Convert Overpass results to our station format
+    return data.elements.map((el, idx) => {
+      const tags = el.tags || {};
+      const name = tags.name || tags.operator || tags.brand || `Charging Station ${idx + 1}`;
+      const capacity = parseInt(tags.capacity || "0", 10);
+      // Simulate availability and crowd based on capacity
+      const availability = capacity > 0 ? Math.min(95, 40 + Math.round(Math.random() * 50)) : Math.round(40 + Math.random() * 55);
+      const crowdOptions = ["low", "medium", "high"];
+      const crowd = crowdOptions[Math.floor(Math.random() * 3)];
+
+      return {
+        id: el.id,
+        name,
+        position: [el.lat, el.lon],
+        availability,
+        crowd,
+        capacity: capacity || null,
+        socket: tags.socket || null,
+        network: tags.network || tags.operator || null,
+        real: true, // flag to distinguish from fallback
+      };
+    });
+  } catch (err) {
+    console.warn("Failed to fetch EV stations from Overpass:", err);
+    return [];
+  }
+}
+
+/* ──────────────────────────────────────────────
+   Fallback: generate stations along route path
+   if Overpass returns nothing
+   ────────────────────────────────────────────── */
+function generateFallbackStations(routePath) {
+  if (!routePath || routePath.length < 2) return [];
+
+  const stations = [];
+  const step = Math.max(1, Math.floor(routePath.length / 5));
+
+  for (let i = step; i < routePath.length - 1; i += step) {
+    if (stations.length >= 4) break;
+    const [lat, lng] = routePath[i];
+    // Offset slightly so they don't sit on the road
+    const jitterLat = lat + (Math.random() - 0.5) * 0.005;
+    const jitterLng = lng + (Math.random() - 0.5) * 0.005;
+    const crowdOptions = ["low", "medium", "high"];
+
+    stations.push({
+      id: `fallback-${i}`,
+      name: `EV Station ${stations.length + 1}`,
+      position: [jitterLat, jitterLng],
+      availability: Math.round(40 + Math.random() * 55),
+      crowd: crowdOptions[Math.floor(Math.random() * 3)],
+      real: false,
+    });
+  }
+  return stations;
+}
 
 function trafficColor(level) {
   if (level === "high") return "#ef4444";
@@ -103,33 +195,37 @@ function createDestIcon() {
 }
 
 // Create custom EV station marker icon
-function createEvStationIcon(crowd) {
+function createEvStationIcon(crowd, isReal) {
   const colors = {
     low: "#2cf8c2",
     medium: "#facc15",
     high: "#f87171",
   };
+
+  const color = colors[crowd] || "#2cf8c2";
+  const ring = isReal ? `border: 3px solid rgba(255,255,255,0.5);` : `border: 3px dashed rgba(255,255,255,0.3);`;
   
   return L.divIcon({
     html: `
       <div style="
-        background: ${colors[crowd] || '#2cf8c2'};
-        border: 3px solid rgba(255,255,255,0.3);
+        background: ${color};
+        ${ring}
         border-radius: 50%;
         width: 24px;
         height: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 0 15px ${colors[crowd] || '#2cf8c2'}88;
-        animation: pulse 2s infinite;
+        box-shadow: 0 0 15px ${color}88;
+        animation: evPulse_${crowd} 2s infinite;
+        font-size: 12px;
       " class="ev-marker">
         ⚡
       </div>
       <style>
-        @keyframes pulse {
-          0%, 100% { box-shadow: 0 0 15px ${colors[crowd] || '#2cf8c2'}88; }
-          50% { box-shadow: 0 0 25px ${colors[crowd] || '#2cf8c2'}cc; }
+        @keyframes evPulse_${crowd} {
+          0%, 100% { box-shadow: 0 0 15px ${color}88; }
+          50% { box-shadow: 0 0 25px ${color}cc; }
         }
       </style>
     `,
@@ -164,26 +260,64 @@ function FitBounds({ positions }) {
    ══════════════════════════════════════════════ */
 function MapView({ routes, selectedRouteId, mood }) {
   const selectedRoute = routes.find((route) => route.id === selectedRouteId) || routes[0] || null;
+  const [evStations, setEvStations] = useState([]);
+  const [stationsLoading, setStationsLoading] = useState(false);
+  const prevRouteKeyRef = useRef("");
 
   const selectedRoutePath = useMemo(() => {
     if (!selectedRoute) return [];
     return toLeafletLatLng(selectedRoute.path);
   }, [selectedRoute]);
 
+  /* ── Fetch EV stations when route changes ── */
+  useEffect(() => {
+    if (!selectedRoutePath || selectedRoutePath.length < 2) {
+      setEvStations([]);
+      return;
+    }
+
+    // Build a key from first+last coords so we don't re-fetch when just switching route alternatives
+    const first = selectedRoutePath[0];
+    const last = selectedRoutePath[selectedRoutePath.length - 1];
+    const routeKey = `${first[0].toFixed(3)},${first[1].toFixed(3)}-${last[0].toFixed(3)},${last[1].toFixed(3)}`;
+
+    if (routeKey === prevRouteKeyRef.current) return;
+    prevRouteKeyRef.current = routeKey;
+
+    let cancelled = false;
+    setStationsLoading(true);
+
+    fetchEvStationsAlongRoute(selectedRoutePath).then((stations) => {
+      if (cancelled) return;
+      if (stations.length > 0) {
+        setEvStations(stations);
+      } else {
+        // Fallback: generate stations along the route
+        setEvStations(generateFallbackStations(selectedRoutePath));
+      }
+      setStationsLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [selectedRoutePath]);
+
   // Filter EV stations based on mood
   const filteredStations = useMemo(() => {
     if (mood === "stressed") {
-      return EV_STATIONS.filter((s) => s.crowd === "low");
+      return evStations.filter((s) => s.crowd === "low");
     }
-    if (mood === "focused") {
-      return [EV_STATIONS.reduce((a, b) => {
-        const distA = Math.abs(a.position[0] - 19.084) + Math.abs(a.position[1] - 72.887);
-        const distB = Math.abs(b.position[0] - 19.084) + Math.abs(b.position[1] - 72.887);
+    if (mood === "focused" && evStations.length > 0) {
+      // Pick the station closest to route midpoint
+      const mid = selectedRoutePath[Math.floor(selectedRoutePath.length / 2)] || selectedRoutePath[0];
+      if (!mid) return evStations.slice(0, 1);
+      return [evStations.reduce((a, b) => {
+        const distA = Math.abs(a.position[0] - mid[0]) + Math.abs(a.position[1] - mid[1]);
+        const distB = Math.abs(b.position[0] - mid[0]) + Math.abs(b.position[1] - mid[1]);
         return distA < distB ? a : b;
       })];
     }
-    return EV_STATIONS;
-  }, [mood]);
+    return evStations;
+  }, [mood, evStations, selectedRoutePath]);
 
   const source = selectedRoutePath[0];
   const destination = selectedRoutePath[selectedRoutePath.length - 1];
@@ -201,6 +335,8 @@ function MapView({ routes, selectedRouteId, mood }) {
         <h3 className="text-lg font-semibold text-slate-100">Live Mobility Grid</h3>
         <span className="text-xs text-slate-400">
           {hasRoute ? `${selectedRoute?.source || "—"} → ${selectedRoute?.destination || "—"}` : "Enter a route to begin"}
+          {" • "}
+          {stationsLoading ? "Loading stations…" : `${filteredStations.length} EV stations`}
           {" • "}
           {mood === "stressed" ? "Low Crowd Only" : mood === "focused" ? "Nearest Only" : "All Stations"}
         </span>
@@ -259,18 +395,21 @@ function MapView({ routes, selectedRouteId, mood }) {
             </Marker>
           )}
 
-          {/* EV Stations */}
+          {/* EV Stations — dynamic, fetched along route */}
           {filteredStations.map((station) => (
             <Marker 
               key={station.id} 
               position={station.position}
-              icon={createEvStationIcon(station.crowd)}
+              icon={createEvStationIcon(station.crowd, station.real)}
             >
               <Popup>
-                <div className="text-sm">
-                  <strong>{station.name}</strong><br />
-                  Availability: {station.availability}%<br />
-                  Crowd: {station.crowd}
+                <div style={{ fontFamily: "system-ui", fontSize: "13px", minWidth: "160px" }}>
+                  <strong>⚡ {station.name}</strong><br />
+                  <span style={{ color: "#666" }}>Availability: {station.availability}%</span><br />
+                  <span style={{ color: "#666" }}>Crowd: {station.crowd}</span>
+                  {station.network && <><br /><span style={{ color: "#888" }}>Network: {station.network}</span></>}
+                  {station.capacity && <><br /><span style={{ color: "#888" }}>Capacity: {station.capacity} slots</span></>}
+                  {!station.real && <><br /><span style={{ color: "#aaa", fontStyle: "italic" }}>Simulated station</span></>}
                 </div>
               </Popup>
             </Marker>
