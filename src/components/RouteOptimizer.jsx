@@ -59,6 +59,19 @@ const ROUTE_LABELS = [
   { id: "least-crowded", title: "Least Crowded", icon: "🚶", traffic: "medium" },
 ];
 
+/* ── Mood → best route mapping ── */
+function getMoodRecommendedId(mood) {
+  if (mood === "focused") return "fastest";
+  if (mood === "stressed") return "least-crowded";
+  return "eco"; // calm → eco (balanced, low pollution)
+}
+
+function getMoodLabel(mood) {
+  if (mood === "focused") return "⚡ Best for Focus";
+  if (mood === "stressed") return "🧘 Best for Calm";
+  return "🍃 Best for You";
+}
+
 function formatDuration(seconds) {
   const mins = Math.round(seconds / 60);
   if (mins < 60) return `${mins} min`;
@@ -217,14 +230,25 @@ function RouteOptimizer({ onRoutesReady, selectedRouteId, setSelectedRouteId, mo
 
       setRouteCards(mappedRoutes);
       stableOnRoutesReady.current(mappedRoutes);
-      setSelectedRouteId(mappedRoutes[0].id);
+      // Auto-select the best route based on current mood
+      const recommended = getMoodRecommendedId(mood);
+      const bestRoute = mappedRoutes.find((r) => r.id === recommended) || mappedRoutes[0];
+      setSelectedRouteId(bestRoute.id);
     } catch (err) {
       setError(err.message || "Something went wrong");
       console.error("RouteOptimizer error:", err);
     } finally {
       setLoading(false);
     }
-  }, [source, destination, sourceCoords, destCoords, setSelectedRouteId]);
+  }, [source, destination, sourceCoords, destCoords, setSelectedRouteId, mood]);
+
+  // When mood changes and we already have routes, switch to the best route for this mood
+  useEffect(() => {
+    if (routeCards.length === 0) return;
+    const recommended = getMoodRecommendedId(mood);
+    const bestRoute = routeCards.find((r) => r.id === recommended) || routeCards[0];
+    setSelectedRouteId(bestRoute.id);
+  }, [mood, routeCards, setSelectedRouteId]);
 
   return (
     <section className="glass rounded-2xl p-4">
@@ -277,17 +301,23 @@ function RouteOptimizer({ onRoutesReady, selectedRouteId, setSelectedRouteId, mo
       <div className="mt-4 grid gap-2">
         {routeCards.map((route) => {
           const selected = selectedRouteId === route.id;
+          const isRecommended = route.id === getMoodRecommendedId(mood);
           return (
             <Motion.button
               key={route.id}
               onClick={() => setSelectedRouteId(route.id)}
               whileHover={{ scale: 1.01 }}
-              className={`rounded-xl border px-3 py-3 text-left transition-all ${
+              className={`rounded-xl border px-3 py-3 text-left transition-all relative ${
                 selected
                   ? "border-cyan-300/50 bg-cyan-300/10 shadow-[0_0_12px_rgba(77,196,255,0.15)]"
                   : "border-white/10 bg-white/5 hover:border-violet-300/30"
               }`}
             >
+              {isRecommended && (
+                <span className="absolute -top-2 right-2 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 px-2 py-0.5 text-[10px] font-bold text-slate-900 shadow-[0_0_10px_rgba(77,196,255,0.4)]">
+                  {getMoodLabel(mood)}
+                </span>
+              )}
               <div className="flex items-center justify-between">
                 <strong className="text-sm text-slate-100">
                   {route.icon} {route.title}
