@@ -15,34 +15,60 @@ L.Icon.Default.mergeOptions({
 });
 
 /* ──────────────────────────────────────────────
-   Fetch real EV charging stations from Overpass
-   (OpenStreetMap — free, no API key)
+   Haversine distance (km) between two [lat,lng]
    ────────────────────────────────────────────── */
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371; // Earth radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** Minimum distance (km) from a point to any point on the route polyline */
+function minDistToRoute(stationLat, stationLng, routePath) {
+  let min = Infinity;
+  for (const [lat, lng] of routePath) {
+    const d = haversineKm(stationLat, stationLng, lat, lng);
+    if (d < min) min = d;
+    if (min < 0.1) return min; // early exit — already on the route
+  }
+  return min;
+}
+
+/* ──────────────────────────────────────────────
+   Fetch real EV charging stations from Overpass
+   using "around" filter (radius along polyline)
+   ────────────────────────────────────────────── */
+const MAX_DISTANCE_KM = 3; // only show stations within 3 km of route
+
 async function fetchEvStationsAlongRoute(routePath) {
   if (!routePath || routePath.length < 2) return [];
 
-  // Calculate bounding box from route coordinates [lat, lng]
-  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-  for (const [lat, lng] of routePath) {
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-    if (lng < minLng) minLng = lng;
-    if (lng > maxLng) maxLng = lng;
+  // Sample ~40 points along the route for the Overpass "around" polyline
+  // (Overpass has query length limits, so we can't send thousands of coords)
+  const maxSamples = 40;
+  const step = Math.max(1, Math.floor(routePath.length / maxSamples));
+  const sampled = [];
+  for (let i = 0; i < routePath.length; i += step) {
+    sampled.push(routePath[i]);
   }
+  // Always include last point
+  const last = routePath[routePath.length - 1];
+  if (sampled[sampled.length - 1] !== last) sampled.push(last);
 
-  // Expand bbox slightly (~2km buffer) so we catch stations near the route
-  const buffer = 0.02;
-  minLat -= buffer;
-  maxLat += buffer;
-  minLng -= buffer;
-  maxLng += buffer;
+  // Build "around" polyline string: "lat1 lng1 lat2 lng2 ..."
+  const polyStr = sampled.map(([lat, lng]) => `${lat} ${lng}`).join(" ");
 
+  // 3000m = 3km radius around the route polyline
   const query = `
-    [out:json][timeout:15];
+    [out:json][timeout:20];
     (
-      node["amenity"="charging_station"](${minLat},${minLng},${maxLat},${maxLng});
+      node["amenity"="charging_station"](around:3000,${polyStr});
     );
-    out body 30;
+    out body 50;
   `;
 
   try {
@@ -57,28 +83,34 @@ async function fetchEvStationsAlongRoute(routePath) {
 
     if (!data.elements || !data.elements.length) return [];
 
-    // Convert Overpass results to our station format
-    return data.elements.map((el, idx) => {
-      const tags = el.tags || {};
-      const name = tags.name || tags.operator || tags.brand || `Charging Station ${idx + 1}`;
-      const capacity = parseInt(tags.capacity || "0", 10);
-      // Simulate availability and crowd based on capacity
-      const availability = capacity > 0 ? Math.min(95, 40 + Math.round(Math.random() * 50)) : Math.round(40 + Math.random() * 55);
-      const crowdOptions = ["low", "medium", "high"];
-      const crowd = crowdOptions[Math.floor(Math.random() * 3)];
+    // Convert + compute distance to route + filter
+    const stations = data.elements
+      .map((el, idx) => {
+        const tags = el.tags || {};
+        const name = tags.name || tags.operator || tags.brand || `Charging Station ${idx + 1}`;
+        const capacity = parseInt(tags.capacity || "0", 10);
+        const availability = capacity > 0 ? Math.min(95, 40 + Math.round(Math.random() * 50)) : Math.round(40 + Math.random() * 55);
+        const crowdOptions = ["low", "medium", "high"];
+        const crowd = crowdOptions[Math.floor(Math.random() * 3)];
+        const distKm = minDistToRoute(el.lat, el.lon, routePath);
 
-      return {
-        id: el.id,
-        name,
-        position: [el.lat, el.lon],
-        availability,
-        crowd,
-        capacity: capacity || null,
-        socket: tags.socket || null,
-        network: tags.network || tags.operator || null,
-        real: true, // flag to distinguish from fallback
-      };
-    });
+        return {
+          id: el.id,
+          name,
+          position: [el.lat, el.lon],
+          availability,
+          crowd,
+          capacity: capacity || null,
+          socket: tags.socket || null,
+          network: tags.network || tags.operator || null,
+          distKm: Math.round(distKm * 10) / 10,
+          real: true,
+        };
+      })
+      .filter((s) => s.distKm <= MAX_DISTANCE_KM)
+      .sort((a, b) => a.distKm - b.distKm);
+
+    return stations;
   } catch (err) {
     console.warn("Failed to fetch EV stations from Overpass:", err);
     return [];
@@ -407,6 +439,7 @@ function MapView({ routes, selectedRouteId, mood }) {
                   <strong>⚡ {station.name}</strong><br />
                   <span style={{ color: "#666" }}>Availability: {station.availability}%</span><br />
                   <span style={{ color: "#666" }}>Crowd: {station.crowd}</span>
+                  {station.distKm != null && <><br /><span style={{ color: "#4dc4ff" }}>📏 {station.distKm} km from route</span></>}
                   {station.network && <><br /><span style={{ color: "#888" }}>Network: {station.network}</span></>}
                   {station.capacity && <><br /><span style={{ color: "#888" }}>Capacity: {station.capacity} slots</span></>}
                   {!station.real && <><br /><span style={{ color: "#aaa", fontStyle: "italic" }}>Simulated station</span></>}
