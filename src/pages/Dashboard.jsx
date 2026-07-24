@@ -67,7 +67,7 @@ function Dashboard({ user, onLogout }) {
           {activeTab === "Mobility" && (
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr]">
               <div className="space-y-4">
-                <MapView routes={routes} selectedRouteId={selectedRouteId} mood={mood} />
+                <MapView routes={routes} selectedRouteId={selectedRouteId} mood={mood} mapTheme="light"/>
               </div>
 
               <div className="space-y-4">
